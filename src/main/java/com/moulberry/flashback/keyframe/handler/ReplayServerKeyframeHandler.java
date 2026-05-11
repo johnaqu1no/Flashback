@@ -3,6 +3,7 @@ package com.moulberry.flashback.keyframe.handler;
 import com.moulberry.flashback.keyframe.KeyframeType;
 import com.moulberry.flashback.keyframe.change.KeyframeChange;
 import com.moulberry.flashback.keyframe.change.KeyframeChangeFreeze;
+import com.moulberry.flashback.keyframe.change.KeyframeChangeFreezeGameTime;
 import com.moulberry.flashback.keyframe.change.KeyframeChangeTickrate;
 import com.moulberry.flashback.keyframe.types.FreezeKeyframeType;
 import com.moulberry.flashback.keyframe.types.SpeedKeyframeType;
@@ -11,11 +12,12 @@ import com.moulberry.flashback.playback.ReplayServer;
 
 import java.util.EnumSet;
 import java.util.Set;
+import java.util.UUID;
 
 public record ReplayServerKeyframeHandler(ReplayServer replayServer) implements KeyframeHandler {
 
     private static final Set<Class<? extends KeyframeChange>> supportedChanges = Set.of(
-        KeyframeChangeTickrate.class, KeyframeChangeFreeze.class
+        KeyframeChangeTickrate.class, KeyframeChangeFreeze.class, KeyframeChangeFreezeGameTime.class
     );
 
     @Override
@@ -41,6 +43,11 @@ public record ReplayServerKeyframeHandler(ReplayServer replayServer) implements 
     @Override
     public void applyFreeze(boolean frozen, int frozenDelay) {
         this.replayServer.setFrozen(frozen, frozenDelay);
+    }
+
+    @Override
+    public void applyFreezeGameTime(boolean frozen, boolean allowAllPlayers, Set<UUID> exemptEntities) {
+        this.replayServer.setGameTimeFrozen(frozen, allowAllPlayers, exemptEntities);
     }
 
     @Override

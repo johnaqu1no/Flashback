@@ -3,13 +3,16 @@ package com.moulberry.flashback.mixin.visuals;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -23,6 +26,10 @@ public class MixinEntityRenderer {
     public boolean isInvisible(Entity instance, Operation<Boolean> original) {
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null && editorState.isEntityHidden(instance)) {
+            // Text displays stay visible (but translucent) in the preview, they're only hidden on export
+            if (instance instanceof Display.TextDisplay && !Flashback.isExporting()) {
+                return original.call(instance);
+            }
             return true;
         }
         return original.call(instance);
@@ -38,6 +45,10 @@ public class MixinEntityRenderer {
                 return false;
             } else if (editorState.isEntityHidden(entity)) {
                 return false;
+            } else if (editorState.forceShowNametags.contains(entity.getUUID())) {
+                return true;
+            } else if (editorState.replayVisuals.forceShowPlayerNametags && entity instanceof Player) {
+                return true;
             }
         }
         return original.call(instance, entity, distance);
@@ -53,6 +64,10 @@ public class MixinEntityRenderer {
                 cir.setReturnValue(false);
             } else if (editorState.isEntityHidden(entity)) {
                 cir.setReturnValue(false);
+            } else if (editorState.forceShowNametags.contains(entity.getUUID())) {
+                cir.setReturnValue(true);
+            } else if (editorState.replayVisuals.forceShowPlayerNametags && entity instanceof Player) {
+                cir.setReturnValue(true);
             }
         }
     }

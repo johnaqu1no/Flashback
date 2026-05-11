@@ -11,6 +11,9 @@ import java.util.Set;
 import java.util.UUID;
 
 public interface KeyframeHandler {
+    default void applyFreezeGameTime(boolean frozen, boolean allowAllPlayers, Set<UUID> exemptEntities) {
+    }
+
     boolean supportsKeyframeChange(Class<? extends KeyframeChange> clazz);
 
     default Minecraft getMinecraft() {

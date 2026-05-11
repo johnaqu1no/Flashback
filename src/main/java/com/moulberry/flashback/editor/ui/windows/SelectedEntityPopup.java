@@ -106,6 +106,17 @@ public class SelectedEntityPopup {
             }
         }
 
+        boolean isFreezeExempt = editorState.freezeExemptEntities.contains(entity.getUUID());
+        if (ImGui.checkbox(I18n.get("flashback.freeze_exempt"), isFreezeExempt)) {
+            if (isFreezeExempt) {
+                editorState.freezeExemptEntities.remove(entity.getUUID());
+            } else {
+                editorState.freezeExemptEntities.add(entity.getUUID());
+            }
+            editorState.markDirty();
+        }
+        ImGuiHelper.tooltip(I18n.get("flashback.freeze_exempt_tooltip"));
+
         boolean isHiddenDuringExport;
         if (editorState.hideAllSpectators && entity instanceof Player player && player.gameMode() == GameType.SPECTATOR) {
             isHiddenDuringExport = true;
@@ -123,6 +134,16 @@ public class SelectedEntityPopup {
                 }
                 editorState.markDirty();
             }
+        }
+
+        boolean forceShowNametag = editorState.forceShowNametags.contains(entity.getUUID());
+        if (ImGui.checkbox(I18n.get("flashback.force_show_nametag"), forceShowNametag)) {
+            if (forceShowNametag) {
+                editorState.forceShowNametags.remove(entity.getUUID());
+            } else {
+                editorState.forceShowNametags.add(entity.getUUID());
+            }
+            editorState.markDirty();
         }
 
         if (!isHiddenDuringExport) {

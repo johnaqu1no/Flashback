@@ -53,14 +53,17 @@ public class EditorState {
     public boolean hideAllSpectators = false;
     public Set<UUID> muteVoice = new HashSet<>();
     public Set<UUID> hideNametags = new HashSet<>();
+    public Set<UUID> forceShowNametags = new HashSet<>();
     public Map<UUID, GameProfile> skinOverride = new HashMap<>();
     public Map<UUID, FilePlayerSkin> skinOverrideFromFile = new HashMap<>();
     public Map<UUID, String> nameOverride = new HashMap<>();
+    public Map<UUID, String> textDisplayTextOverride = new HashMap<>();
     public Map<UUID, GlowingOverride> glowingOverride = new HashMap<>();
     public Set<UUID> hideTeamPrefix = new HashSet<>();
     public Set<UUID> hideTeamSuffix = new HashSet<>();
     public Set<UUID> hideBelowName = new HashSet<>();
     public Set<UUID> hideCape = new HashSet<>();
+    public Set<UUID> freezeExemptEntities = new HashSet<>();
     public Set<String> filteredEntities = new HashSet<>();
     public Set<String> filteredParticles = new HashSet<>();
     public Map<UUID, EnumSet<EquipmentSlot>> hiddenEquipment = new HashMap<>();

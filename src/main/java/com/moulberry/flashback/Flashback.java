@@ -281,6 +281,7 @@ public class Flashback implements ModInitializer, ClientModInitializer {
         KeyframeRegistry.register(TimelapseKeyframeType.INSTANCE);
         KeyframeRegistry.register(TimeOfDayKeyframeType.INSTANCE);
         KeyframeRegistry.register(FreezeKeyframeType.INSTANCE);
+        KeyframeRegistry.register(FreezeGameTimeKeyframeType.INSTANCE);
         KeyframeRegistry.register(BlockOverrideKeyframeType.INSTANCE);
         KeyframeRegistry.register(AudioKeyframeType.INSTANCE);
 
@@ -484,6 +485,35 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                 return 0;
             }));
             dispatcher.register(showEntity);
+
+            var settext = Commands.literal("settext").then(Commands.argument("targets", EntityArgument.entities()).then(Commands.argument("text", StringArgumentType.greedyString()).executes(command -> {
+                EditorState editorState = EditorStateManager.getCurrent();
+                if (!Flashback.isInReplay() || editorState == null) {
+                    command.getSource().sendFailure(Component.translatable("flashback.command_only_inside_replay", Component.literal("settext")));
+                    return 0;
+                }
+                var entities = EntityArgument.getEntities(command, "targets");
+                String text = StringArgumentType.getString(command, "text");
+
+                String json = parseFormattedText(text);
+
+                int count = 0;
+                for (Entity entity : entities) {
+                    if (entity instanceof net.minecraft.world.entity.Display.TextDisplay) {
+                        editorState.textDisplayTextOverride.put(entity.getUUID(), json);
+                        count++;
+                    }
+                }
+
+                if (count == 0) {
+                    command.getSource().sendFailure(Component.translatable("flashback.settext_command.no_text_displays"));
+                } else {
+                    int finalCount = count;
+                    command.getSource().sendSuccess(() -> Component.translatable("flashback.settext_command.n_texts_set", Component.literal(String.valueOf(finalCount))), false);
+                }
+                return count;
+            })));
+            dispatcher.register(settext);
         });
 
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
@@ -930,6 +960,25 @@ public class Flashback implements ModInitializer, ClientModInitializer {
 
     public static boolean isExporting() {
         return EXPORT_JOB != null && EXPORT_JOB.isRunning();
+    }
+
+    public static String parseFormattedText(String input) {
+        net.kyori.adventure.text.Component component;
+        if (input.contains("\u00A7") || (input.contains("&") && !input.contains("<"))) {
+            // Legacy color codes (§ or &)
+            char[] chars = input.toCharArray();
+            for (int i = 0; i < chars.length - 1; i++) {
+                if (chars[i] == '&' && "0123456789AaBbCcDdEeFfKkLlMmNnOoRrXx".indexOf(chars[i + 1]) > -1) {
+                    chars[i] = '\u00A7';
+                    chars[i + 1] = Character.toLowerCase(chars[i + 1]);
+                }
+            }
+            component = net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().deserialize(new String(chars));
+        } else {
+            // MiniMessage
+            component = net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(input);
+        }
+        return net.kyori.adventure.text.serializer.gson.GsonComponentSerializer.gson().serialize(component);
     }
 
     public static void updateIsInReplay() {

@@ -53,6 +53,7 @@
     "visuals.MixinParticleEngine",
     "visuals.MixinPlayer",
     "visuals.MixinPlayerRenderer",
+    "visuals.MixinTextDisplayRenderer",
     "visuals.MixinWeatherEffectRenderer"
   ],
   "injectors": {

@@ -75,6 +75,11 @@ dependencies {
     // Commons math
     shadow(implementation("org.apache.commons:commons-math3:3.6.1"))
 
+    // Adventure (text formatting for /settext command)
+    shadow(implementation("net.kyori:adventure-text-minimessage:4.17.0"))
+    shadow(implementation("net.kyori:adventure-text-serializer-gson:4.17.0"))
+    shadow(implementation("net.kyori:adventure-text-serializer-legacy:4.17.0"))
+
     // Mod compatibility
     modCompileOnly("maven.modrinth:distanthorizons:Mt9bDAs6")
     modCompileOnly("maven.modrinth:sodium:RncWhTxD")

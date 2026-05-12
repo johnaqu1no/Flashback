@@ -108,6 +108,7 @@ public abstract class Keyframe {
                 case "camera_shake" -> context.deserialize(json, CameraShakeKeyframe.class);
                 case "block_override" -> context.deserialize(json, BlockOverrideKeyframe.class);
                 case "audio" -> context.deserialize(json, AudioKeyframe.class);
+                case "freeze_game_time" -> context.deserialize(json, FreezeGameTimeKeyframe.class);
                 default -> throw new IllegalStateException("Unknown keyframe type: " + type);
             };
             keyframe.interpolationType(context.deserialize(jsonObject.get("interpolation_type"), InterpolationType.class));
@@ -153,6 +154,10 @@ public abstract class Keyframe {
                 case AudioKeyframe audioKeyframe -> {
                     jsonObject = (JsonObject) context.serialize(audioKeyframe);
                     jsonObject.addProperty("type", "audio");
+                }
+                case FreezeGameTimeKeyframe freezeGameTimeKeyframe -> {
+                    jsonObject = (JsonObject) context.serialize(freezeGameTimeKeyframe);
+                    jsonObject.addProperty("type", "freeze_game_time");
                 }
                 default -> throw new IllegalStateException("Unknown keyframe type: " + src.getClass());
             }

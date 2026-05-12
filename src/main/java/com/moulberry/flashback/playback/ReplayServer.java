@@ -134,6 +134,12 @@ public class ReplayServer extends IntegratedServer {
     private int desiredFrozenDelay = -1;
     private boolean isFrozen = false;
     private int frozenDelay = -1;
+    private boolean desiredGameTimeFrozen = false;
+    private boolean desiredAllowAllPlayers = true;
+    private java.util.Set<java.util.UUID> desiredGameTimeExempt = java.util.Set.of();
+    private boolean gameTimeFrozen = false;
+    private boolean gameTimeAllowAllPlayers = true;
+    private java.util.Set<java.util.UUID> gameTimeExempt = java.util.Set.of();
 
     public volatile boolean failedToLoadRegistryDataWarning = false;
     public volatile boolean failedToSpawnPlayerWarning = false;
@@ -482,6 +488,23 @@ public class ReplayServer extends IntegratedServer {
         this.desiredFrozenDelay = delay;
     }
 
+    public void setGameTimeFrozen(boolean frozen, boolean allowAllPlayers, java.util.Set<java.util.UUID> exemptEntities) {
+        this.desiredGameTimeFrozen = frozen;
+        this.desiredAllowAllPlayers = allowAllPlayers;
+        this.desiredGameTimeExempt = exemptEntities == null ? java.util.Set.of() : exemptEntities;
+    }
+
+    public boolean isGameTimeFrozen() {
+        return this.gameTimeFrozen;
+    }
+
+    public boolean isGameTimeExempt(net.minecraft.world.entity.Entity entity) {
+        if (this.gameTimeAllowAllPlayers && entity instanceof net.minecraft.world.entity.player.Player) {
+            return true;
+        }
+        return this.gameTimeExempt.contains(entity.getUUID());
+    }
+
     public int getReplayTick() {
         return this.targetTick;
     }
@@ -716,6 +739,9 @@ public class ReplayServer extends IntegratedServer {
                 if (level != null) {
                     Entity entity = level.getEntity(id);
                     if (entity != null) {
+                        if (this.gameTimeFrozen && !this.isGameTimeExempt(entity)) {
+                            continue;
+                        }
                         if (entity.isPassenger()) {
                             entity.setYRot(yaw);
                             entity.setXRot(pitch);
@@ -1087,7 +1113,13 @@ public class ReplayServer extends IntegratedServer {
     private void runUpdates(BooleanSupplier booleanSupplier) {
         this.desiredTickRate = 20.0f;
         this.desiredFrozen = false;
+        this.desiredGameTimeFrozen = false;
+        this.desiredAllowAllPlayers = true;
+        this.desiredGameTimeExempt = java.util.Set.of();
         this.getEditorState().applyKeyframes(new ReplayServerKeyframeHandler(this), this.targetTick);
+        this.gameTimeFrozen = this.desiredGameTimeFrozen;
+        this.gameTimeAllowAllPlayers = this.desiredAllowAllPlayers;
+        this.gameTimeExempt = this.desiredGameTimeExempt;
 
         if (this.desiredFrozen && this.frozenDelay < 0) {
             if (this.desiredFrozenDelay <= 0) {

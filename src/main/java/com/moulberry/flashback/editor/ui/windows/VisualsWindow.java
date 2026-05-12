@@ -115,6 +115,13 @@ public class VisualsWindow {
                 editorState.markDirty();
             }
 
+            if (visuals.renderNametags) {
+                if (ImGui.checkbox(I18n.get("flashback.visuals.world.force_show_player_nametags"), visuals.forceShowPlayerNametags)) {
+                    visuals.forceShowPlayerNametags = !visuals.forceShowPlayerNametags;
+                    editorState.markDirty();
+                }
+            }
+
             if (ImGui.checkbox(I18n.get("flashback.visuals.world.render_beacon_beams"), visuals.renderBeaconBeams)) {
                 visuals.renderBeaconBeams = !visuals.renderBeaconBeams;
                 editorState.markDirty();

@@ -104,12 +104,33 @@ public class SelectedEntityPopup {
             }
         }
 
+        boolean isFreezeExempt = editorState.freezeExemptEntities.contains(entity.getUUID());
+        if (ImGui.checkbox(I18n.get("flashback.freeze_exempt"), isFreezeExempt)) {
+            if (isFreezeExempt) {
+                editorState.freezeExemptEntities.remove(entity.getUUID());
+            } else {
+                editorState.freezeExemptEntities.add(entity.getUUID());
+            }
+            editorState.markDirty();
+        }
+        ImGuiHelper.tooltip(I18n.get("flashback.freeze_exempt_tooltip"));
+
         boolean isHiddenDuringExport = editorState.hideDuringExport.contains(entity.getUUID());
         if (ImGui.checkbox(I18n.get("flashback.hide_during_export"), isHiddenDuringExport)) {
             if (isHiddenDuringExport) {
                 editorState.hideDuringExport.remove(entity.getUUID());
             } else {
                 editorState.hideDuringExport.add(entity.getUUID());
+            }
+            editorState.markDirty();
+        }
+
+        boolean forceShowNametag = editorState.forceShowNametags.contains(entity.getUUID());
+        if (ImGui.checkbox(I18n.get("flashback.force_show_nametag"), forceShowNametag)) {
+            if (forceShowNametag) {
+                editorState.forceShowNametags.remove(entity.getUUID());
+            } else {
+                editorState.forceShowNametags.add(entity.getUUID());
             }
             editorState.markDirty();
         }

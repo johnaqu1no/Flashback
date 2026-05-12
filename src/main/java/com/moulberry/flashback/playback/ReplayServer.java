@@ -1156,9 +1156,8 @@ public class ReplayServer extends IntegratedServer {
         if (tickRateManager.tickrate() != tickRate) {
             tickRateManager.setTickRate(tickRate);
         }
-        boolean shouldFreezeWorld = this.isFrozen || this.gameTimeFrozen;
-        if (tickRateManager.isFrozen() != shouldFreezeWorld) {
-            tickRateManager.setFrozen(shouldFreezeWorld);
+        if (tickRateManager.isFrozen() != isFrozen) {
+            tickRateManager.setFrozen(isFrozen);
         }
 
         boolean tickChanged = this.targetTick != this.currentTick;
@@ -1260,8 +1259,8 @@ public class ReplayServer extends IntegratedServer {
                 } else if (!tickRateManager.isFrozen()) {
                     tickRateManager.setFrozen(true);
                 }
-            } else if (tickRateManager.isFrozen() != shouldFreezeWorld) {
-                tickRateManager.setFrozen(shouldFreezeWorld);
+            } else if (tickRateManager.isFrozen() != isFrozen) {
+                tickRateManager.setFrozen(isFrozen);
             }
         } else if (!tickRateManager.isFrozen()) {
             tickRateManager.setFrozen(true);

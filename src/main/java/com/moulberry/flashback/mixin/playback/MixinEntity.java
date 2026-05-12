@@ -14,6 +14,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.UUID;
@@ -32,6 +33,19 @@ public abstract class MixinEntity {
 
     @Shadow
     public abstract UUID getUUID();
+
+    @Inject(method = "tick", at = @At("HEAD"), cancellable = true)
+    public void flashback$skipTickWhenGameTimeFrozen(CallbackInfo ci) {
+        ReplayServer replayServer = Flashback.getReplayServer();
+        if (replayServer == null || !replayServer.isGameTimeFrozen()) {
+            return;
+        }
+        Entity self = (Entity) (Object) this;
+        if (replayServer.isGameTimeExempt(self)) {
+            return;
+        }
+        ci.cancel();
+    }
 
     // Force entities to be able to ride players on servers
     @WrapOperation(method = "startRiding(Lnet/minecraft/world/entity/Entity;ZZ)Z", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/Level;isClientSide()Z"))

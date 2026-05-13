@@ -187,6 +187,12 @@ public class SelectedEntityPopup {
                         }
                     }
 
+                    if (!changeNameInput.isEmpty()) {
+                        if (ImGui.button(I18n.get("flashback.apply_username_skin"))) {
+                            fetchSkinForUsername(entity.getUUID(), ImGuiHelper.getString(changeNameInput), editorState);
+                        }
+                    }
+
                     if (editorState.hideTeamPrefix.contains(player.getUUID())) {
                         if (ImGui.checkbox(I18n.get("flashback.hide_team_prefix"), true)) {
                             editorState.hideTeamPrefix.remove(player.getUUID());
@@ -366,6 +372,52 @@ public class SelectedEntityPopup {
     }
 
     private static final String RANDOM_NAME_ENDPOINT = "https://lode.gg/api/nametag/random";
+    private static final String MOJANG_USERNAME_ENDPOINT = "https://api.mojang.com/users/profiles/minecraft/";
+
+    private static void fetchSkinForUsername(UUID targetUuid, String username, EditorState editorState) {
+        CompletableFuture.runAsync(() -> {
+            try {
+                HttpClient client = HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(10))
+                    .build();
+                HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(MOJANG_USERNAME_ENDPOINT + username))
+                    .timeout(Duration.ofSeconds(10))
+                    .GET()
+                    .build();
+                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+                if (response.statusCode() == 204 || response.statusCode() == 404) {
+                    ReplayUI.setInfoOverlay("No Minecraft account for '" + username + "'");
+                    return;
+                }
+                if (response.statusCode() != 200) {
+                    Flashback.LOGGER.warn("Mojang username lookup failed: HTTP {}", response.statusCode());
+                    return;
+                }
+
+                JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
+                if (!json.has("id")) {
+                    Flashback.LOGGER.warn("Mojang response missing 'id' field");
+                    return;
+                }
+
+                String dashless = json.get("id").getAsString();
+                UUID skinUuid = UUID.fromString(dashless.replaceFirst(
+                    "(\\p{XDigit}{8})(\\p{XDigit}{4})(\\p{XDigit}{4})(\\p{XDigit}{4})(\\p{XDigit}{12})",
+                    "$1-$2-$3-$4-$5"));
+
+                ProfileResult profile = Minecraft.getInstance().getMinecraftSessionService().fetchProfile(skinUuid, true);
+                if (profile != null) {
+                    editorState.skinOverride.put(targetUuid, profile.profile());
+                    editorState.skinOverrideFromFile.remove(targetUuid);
+                    editorState.markDirty();
+                    ReplayUI.setInfoOverlay("Applied skin for '" + username + "'");
+                }
+            } catch (Exception e) {
+                Flashback.LOGGER.error("Failed to fetch skin for username '{}'", username, e);
+            }
+        });
+    }
 
     private static void fetchRandomNameAndSkin(UUID targetUuid, EditorState editorState) {
         CompletableFuture.runAsync(() -> {

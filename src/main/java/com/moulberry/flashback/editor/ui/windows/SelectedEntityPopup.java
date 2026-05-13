@@ -1,5 +1,7 @@
 package com.moulberry.flashback.editor.ui.windows;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.yggdrasil.ProfileResult;
 import com.mojang.blaze3d.platform.Window;
@@ -35,7 +37,12 @@ import net.minecraft.world.scores.Scoreboard;
 import net.minecraft.world.scores.Team;
 import org.lwjgl.glfw.GLFW;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.EnumSet;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -223,6 +230,10 @@ public class SelectedEntityPopup {
 
                 showGlowingDropdown(entity, editorState);
 
+                if (ImGui.button(I18n.get("flashback.random_name"))) {
+                    fetchRandomNameAndSkin(entity.getUUID(), editorState);
+                }
+
                 ImGuiHelper.separatorWithText(I18n.get("flashback.change_skin_and_cape"));
                 ImGui.setNextItemWidth(320);
                 ImGui.inputTextWithHint("##SetSkinInput", "e.g. d0e05de7-6067-454d-beae-c6d19d886191", changeSkinInput);
@@ -352,6 +363,52 @@ public class SelectedEntityPopup {
                 }
             }
         }
+    }
+
+    private static final String RANDOM_NAME_ENDPOINT = "https://lode.gg/api/nametag/random";
+
+    private static void fetchRandomNameAndSkin(UUID targetUuid, EditorState editorState) {
+        CompletableFuture.runAsync(() -> {
+            try {
+                HttpClient client = HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(10))
+                    .build();
+                HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(RANDOM_NAME_ENDPOINT))
+                    .timeout(Duration.ofSeconds(10))
+                    .GET()
+                    .build();
+                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+                if (response.statusCode() != 200) {
+                    Flashback.LOGGER.warn("Random name fetch failed: HTTP {}", response.statusCode());
+                    return;
+                }
+
+                JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
+                if (!json.has("nick")) {
+                    Flashback.LOGGER.warn("Random name response missing 'nick' field");
+                    return;
+                }
+
+                String nick = json.get("nick").getAsString();
+                editorState.nameOverride.put(targetUuid, nick);
+                editorState.markDirty();
+
+                if (json.has("uuid")) {
+                    UUID skinUuid = UUID.fromString(json.get("uuid").getAsString());
+                    ProfileResult profile = Minecraft.getInstance().getMinecraftSessionService().fetchProfile(skinUuid, true);
+                    if (profile != null) {
+                        editorState.skinOverride.put(targetUuid, profile.profile());
+                        editorState.skinOverrideFromFile.remove(targetUuid);
+                        editorState.markDirty();
+                    }
+                }
+
+                ReplayUI.setInfoOverlay("Applied random name '" + nick + "'");
+            } catch (Exception e) {
+                Flashback.LOGGER.error("Failed to fetch random name", e);
+            }
+        });
     }
 
     private static void showGlowingDropdown(Entity entity, EditorState editorState) {

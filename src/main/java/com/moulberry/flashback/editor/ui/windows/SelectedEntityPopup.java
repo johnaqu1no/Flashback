@@ -406,7 +406,7 @@ public class SelectedEntityPopup {
                     "(\\p{XDigit}{8})(\\p{XDigit}{4})(\\p{XDigit}{4})(\\p{XDigit}{4})(\\p{XDigit}{12})",
                     "$1-$2-$3-$4-$5"));
 
-                ProfileResult profile = Minecraft.getInstance().getMinecraftSessionService().fetchProfile(skinUuid, true);
+                ProfileResult profile = Minecraft.getInstance().services().sessionService().fetchProfile(skinUuid, true);
                 if (profile != null) {
                     editorState.skinOverride.put(targetUuid, profile.profile());
                     editorState.skinOverrideFromFile.remove(targetUuid);
@@ -448,7 +448,7 @@ public class SelectedEntityPopup {
 
                 if (json.has("uuid")) {
                     UUID skinUuid = UUID.fromString(json.get("uuid").getAsString());
-                    ProfileResult profile = Minecraft.getInstance().getMinecraftSessionService().fetchProfile(skinUuid, true);
+                    ProfileResult profile = Minecraft.getInstance().services().sessionService().fetchProfile(skinUuid, true);
                     if (profile != null) {
                         editorState.skinOverride.put(targetUuid, profile.profile());
                         editorState.skinOverrideFromFile.remove(targetUuid);

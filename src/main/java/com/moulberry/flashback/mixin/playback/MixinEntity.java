@@ -8,8 +8,10 @@ import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -36,6 +38,25 @@ public abstract class MixinEntity {
 
     @Inject(method = "tick", at = @At("HEAD"), cancellable = true)
     public void flashback$skipTickWhenGameTimeFrozen(CallbackInfo ci) {
+        ReplayServer replayServer = Flashback.getReplayServer();
+        if (replayServer == null || !replayServer.isGameTimeFrozen()) {
+            return;
+        }
+        Entity self = (Entity) (Object) this;
+        if (replayServer.isGameTimeExempt(self)) {
+            return;
+        }
+        ci.cancel();
+    }
+
+    // Belt-and-suspenders: even if a subclass override (e.g. ThrowableProjectile.tick)
+    // bypasses the Entity.tick() cancel above by running its own physics after super.tick()
+    // returns early, the underlying move() call still goes through Entity.move(). Block
+    // it for non-exempt entities so projectiles like ender pearls cannot drift while
+    // game time is frozen — fixes rubber-banding caused by server-side movement getting
+    // broadcast then snapped back by the pin.
+    @Inject(method = "move", at = @At("HEAD"), cancellable = true)
+    public void flashback$skipMoveWhenGameTimeFrozen(MoverType type, Vec3 movement, CallbackInfo ci) {
         ReplayServer replayServer = Flashback.getReplayServer();
         if (replayServer == null || !replayServer.isGameTimeFrozen()) {
             return;

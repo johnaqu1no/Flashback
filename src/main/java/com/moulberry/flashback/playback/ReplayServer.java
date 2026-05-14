@@ -140,6 +140,8 @@ public class ReplayServer extends IntegratedServer {
     private boolean gameTimeFrozen = false;
     private boolean gameTimeAllowAllPlayers = true;
     private java.util.Set<java.util.UUID> gameTimeExempt = java.util.Set.of();
+    private boolean previousGameTimeFrozen = false;
+    private final java.util.Map<java.util.UUID, double[]> pinnedEntityPositions = new java.util.HashMap<>();
 
     public volatile boolean failedToLoadRegistryDataWarning = false;
     public volatile boolean failedToSpawnPlayerWarning = false;
@@ -1176,6 +1178,9 @@ public class ReplayServer extends IntegratedServer {
         // Tick underlying server
         super.tickServer(booleanSupplier);
 
+        // Pin non-exempt entities while game time frozen
+        this.applyGameTimePin();
+
         // Apply block changes
         applyBlockOverridesToTimeline();
 
@@ -1261,6 +1266,42 @@ public class ReplayServer extends IntegratedServer {
             }
         } else if (!tickRateManager.isFrozen()) {
             tickRateManager.setFrozen(true);
+        }
+    }
+
+    private void applyGameTimePin() {
+        if (!this.gameTimeFrozen) {
+            if (this.previousGameTimeFrozen) {
+                this.pinnedEntityPositions.clear();
+            }
+            this.previousGameTimeFrozen = false;
+            return;
+        }
+
+        boolean freezeJustStarted = !this.previousGameTimeFrozen;
+        this.previousGameTimeFrozen = true;
+
+        for (ServerLevel level : this.getAllLevels()) {
+            for (Entity entity : level.getAllEntities()) {
+                if (this.isGameTimeExempt(entity)) {
+                    continue;
+                }
+
+                java.util.UUID uuid = entity.getUUID();
+                double[] pin = this.pinnedEntityPositions.get(uuid);
+                if (pin == null) {
+                    pin = new double[]{entity.getX(), entity.getY(), entity.getZ(), entity.getYRot(), entity.getXRot()};
+                    this.pinnedEntityPositions.put(uuid, pin);
+                }
+
+                entity.moveTo(pin[0], pin[1], pin[2], (float) pin[3], (float) pin[4]);
+                entity.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+
+                if (freezeJustStarted) {
+                    var dim = level.dimension();
+                    this.needsPositionUpdate.computeIfAbsent(dim, k -> new it.unimi.dsi.fastutil.ints.IntOpenHashSet()).add(entity.getId());
+                }
+            }
         }
     }
 

@@ -530,6 +530,10 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
             return;
         }
 
+        if (this.replayServer.isGameTimeFrozen() && !this.replayServer.isGameTimeExempt(entity)) {
+            return;
+        }
+
         Vec3 position = clientboundEntityPositionSyncPacket.values().position();
         entity.setPos(position);
         entity.setOnGround(clientboundEntityPositionSyncPacket.onGround());
@@ -1103,6 +1107,9 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
     @Override
     public void handleSetEntityMotion(ClientboundSetEntityMotionPacket clientboundSetEntityMotionPacket) {
         Entity entity = this.getEntityOrPending(clientboundSetEntityMotionPacket.getId());
+        if (entity != null && this.replayServer.isGameTimeFrozen() && !this.replayServer.isGameTimeExempt(entity)) {
+            return;
+        }
         forward(entity, clientboundSetEntityMotionPacket);
 
         if (entity != null) {
@@ -1277,6 +1284,10 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
         Entity entity = this.getEntityOrPending(clientboundTeleportEntityPacket.id());
         if (entity == null) {
             forward(clientboundTeleportEntityPacket);
+            return;
+        }
+
+        if (this.replayServer.isGameTimeFrozen() && !this.replayServer.isGameTimeExempt(entity)) {
             return;
         }
 

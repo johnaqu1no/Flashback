@@ -2,6 +2,7 @@ package com.moulberry.flashback.mixin.replay_server;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.moulberry.flashback.Flashback;
 import com.moulberry.flashback.ext.ServerLevelExt;
 import com.moulberry.flashback.playback.ReplayServer;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
@@ -18,6 +19,7 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(value = ServerLevel.class, priority = 900)
@@ -65,6 +67,22 @@ public abstract class MixinServerLevel implements ServerLevelExt {
     public void addFreshEntity(Entity entity, CallbackInfoReturnable<Boolean> cir) {
         if (!(entity instanceof Player) && !this.canSpawnEntities) {
             cir.setReturnValue(false);
+        }
+    }
+
+    @Inject(method = "tickNonPassenger", at = @At("HEAD"), cancellable = true)
+    public void flashback$tickNonPassengerGameTimeFreeze(Entity entity, CallbackInfo ci) {
+        ReplayServer replayServer = Flashback.getReplayServer();
+        if (replayServer != null && replayServer.isGameTimeFrozen() && !replayServer.isGameTimeExempt(entity)) {
+            ci.cancel();
+        }
+    }
+
+    @Inject(method = "tickPassenger", at = @At("HEAD"), cancellable = true)
+    public void flashback$tickPassengerGameTimeFreeze(Entity vehicle, Entity passenger, CallbackInfo ci) {
+        ReplayServer replayServer = Flashback.getReplayServer();
+        if (replayServer != null && replayServer.isGameTimeFrozen() && !replayServer.isGameTimeExempt(passenger)) {
+            ci.cancel();
         }
     }
 

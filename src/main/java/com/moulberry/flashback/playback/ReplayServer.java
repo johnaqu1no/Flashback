@@ -1278,10 +1278,11 @@ public class ReplayServer extends IntegratedServer {
             return;
         }
 
-        boolean freezeJustStarted = !this.previousGameTimeFrozen;
         this.previousGameTimeFrozen = true;
 
         for (ServerLevel level : this.getAllLevels()) {
+            Int2ObjectMap<ChunkMap.TrackedEntity> entityMap = level.getChunkSource().chunkMap.entityMap;
+
             for (Entity entity : level.getAllEntities()) {
                 if (this.isGameTimeExempt(entity)) {
                     continue;
@@ -1297,9 +1298,19 @@ public class ReplayServer extends IntegratedServer {
                 entity.moveTo(pin[0], pin[1], pin[2], (float) pin[3], (float) pin[4]);
                 entity.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
 
-                if (freezeJustStarted) {
-                    var dim = level.dimension();
-                    this.needsPositionUpdate.computeIfAbsent(dim, k -> new it.unimi.dsi.fastutil.ints.IntOpenHashSet()).add(entity.getId());
+                // Re-broadcast pin + zero velocity every tick. One-shot sync at freeze
+                // start leaves the client free to extrapolate (projectile prediction,
+                // residual motion packets, lerp targets) which then snap back when the
+                // server tracker eventually corrects — visible as rubber-banding. Sending
+                // every tick keeps the client clamped to the pinned position.
+                ChunkMap.TrackedEntity trackedEntity = entityMap.get(entity.getId());
+                if (trackedEntity != null && !entity.isPassenger()) {
+                    ServerEntity serverEntity = trackedEntity.serverEntity;
+                    trackedEntity.broadcast(new ClientboundEntityPositionSyncPacket(entity.getId(),
+                        PositionMoveRotation.of(entity), serverEntity.wasOnGround));
+                    trackedEntity.broadcast(new ClientboundSetEntityMotionPacket(entity.getId(),
+                        net.minecraft.world.phys.Vec3.ZERO));
+                    serverEntity.positionCodec.setBase(entity.trackingPosition());
                 }
             }
         }

@@ -58,6 +58,7 @@
     "visuals.MixinParticleEngine",
     "visuals.MixinPlayer",
     "visuals.MixinPlayerRenderer",
+    "visuals.MixinTextDisplayAccessor",
     "visuals.MixinTextDisplayRenderer",
     "visuals.MixinWeatherEffectRenderer"
   ],

@@ -2,6 +2,7 @@ package com.moulberry.flashback.mixin.movement;
 
 import com.moulberry.flashback.EnhancedFlight;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.FormattedNameCache;
 import com.moulberry.flashback.combo_options.MovementDirection;
 import com.moulberry.flashback.configuration.FlashbackConfigV1;
 import com.moulberry.flashback.state.EditorState;
@@ -64,7 +65,7 @@ public abstract class MixinPlayerEntity extends LivingEntity {
             if (editorState != null) {
                 String nameOverride = editorState.nameOverride.get(this.uuid);
                 if (nameOverride != null) {
-                    cir.setReturnValue(Component.literal(nameOverride));
+                    cir.setReturnValue(FormattedNameCache.get(nameOverride, this.registryAccess()));
                 }
             }
         }

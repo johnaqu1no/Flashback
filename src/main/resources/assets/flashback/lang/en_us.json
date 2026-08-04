@@ -257,6 +257,7 @@
   "flashback.reset_skin": "Reset Skin",
   "flashback.random_name": "Random Name",
   "flashback.apply_username_skin": "Apply Username's Skin",
+  "flashback.nametag_text_display_detected": "Text display nametag detected, name changes will update it",
   "flashback.glowing": "Glowing",
   "flashback.export_to_video": "Export to video",
   "flashback.capture_options": "Capture Options",

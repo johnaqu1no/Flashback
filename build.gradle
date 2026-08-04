@@ -82,7 +82,9 @@ dependencies {
     include(implementation("net.kyori:adventure-key:4.17.0"))
     include(implementation("net.kyori:examination-api:1.3.0"))
     include(implementation("net.kyori:adventure-text-minimessage:4.17.0"))
+    include(implementation("net.kyori:adventure-text-serializer-json:4.17.0"))
     include(implementation("net.kyori:adventure-text-serializer-gson:4.17.0"))
+    include(implementation("net.kyori:option:1.0.0"))
     include(implementation("net.kyori:adventure-text-serializer-legacy:4.17.0"))
 
     // Mod compatibility

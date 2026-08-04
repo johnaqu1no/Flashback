@@ -88,6 +88,9 @@ import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.core.*;
 import net.minecraft.core.registries.Registries;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
@@ -980,12 +983,12 @@ public class Flashback implements ModInitializer, ClientModInitializer {
                     chars[i + 1] = Character.toLowerCase(chars[i + 1]);
                 }
             }
-            component = net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().deserialize(new String(chars));
+            component = LegacyComponentSerializer.legacySection().deserialize(new String(chars));
         } else {
             // MiniMessage
-            component = net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(input);
+            component = MiniMessage.miniMessage().deserialize(input);
         }
-        return net.kyori.adventure.text.serializer.gson.GsonComponentSerializer.gson().serialize(component);
+        return GsonComponentSerializer.gson().serialize(component);
     }
 
     public static void updateIsInReplay() {

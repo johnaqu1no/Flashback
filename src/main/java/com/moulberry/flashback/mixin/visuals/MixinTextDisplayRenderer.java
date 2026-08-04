@@ -1,60 +1,61 @@
 package com.moulberry.flashback.mixin.visuals;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
-import com.mojang.serialization.JsonOps;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.FormattedNameCache;
+import com.moulberry.flashback.TextDisplayNametags;
 import com.moulberry.flashback.state.EditorState;
 import com.moulberry.flashback.state.EditorStateManager;
 import net.minecraft.client.renderer.entity.DisplayRenderer;
 import net.minecraft.client.renderer.entity.state.TextDisplayEntityRenderState;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.ComponentSerialization;
-import net.minecraft.resources.RegistryOps;
 import net.minecraft.world.entity.Display;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.util.UUID;
-
 @Mixin(DisplayRenderer.TextDisplayRenderer.class)
 public class MixinTextDisplayRenderer {
 
-    @Unique
-    private Component flashback$originalText;
-
     @Inject(method = "extractRenderState(Lnet/minecraft/world/entity/Display$TextDisplay;Lnet/minecraft/client/renderer/entity/state/TextDisplayEntityRenderState;F)V", at = @At("HEAD"))
     public void extractRenderStateHead(Display.TextDisplay entity, TextDisplayEntityRenderState state, float partialTick, CallbackInfo ci) {
-        flashback$originalText = null;
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState == null) return;
 
-        String textOverrideJson = editorState.textDisplayTextOverride.get(entity.getUUID());
-        if (textOverrideJson != null) {
-            try {
-                JsonElement parsed = JsonParser.parseString(textOverrideJson);
-                RegistryOps<JsonElement> ops = entity.registryAccess().createSerializationContext(JsonOps.INSTANCE);
-                Component newText = ComponentSerialization.CODEC.parse(ops, parsed).result().orElse(null);
-                if (newText != null) {
-                    flashback$originalText = entity.getText();
-                    entity.setText(newText);
-                }
-            } catch (Exception ignored) {
-            }
+        MixinTextDisplayAccessor accessor = (MixinTextDisplayAccessor) entity;
+        Display.TextDisplay.TextRenderState current = accessor.flashback$getTextRenderState();
+        if (current == null) return;
+
+        // The desired text falls back to the entity's real text, so removing an override restores it
+        Component desired = resolveOverride(entity, editorState);
+        if (desired == null) {
+            desired = entity.getText();
         }
+        if (desired == null || desired.equals(current.text())) {
+            return;
+        }
+
+        accessor.flashback$setTextRenderState(new Display.TextDisplay.TextRenderState(desired, current.lineWidth(),
+            current.textOpacity(), current.backgroundColor(), current.flags()));
+        accessor.flashback$setClientDisplayCache(null);
+    }
+
+    private static Component resolveOverride(Display.TextDisplay entity, EditorState editorState) {
+        String overrideJson = editorState.textDisplayTextOverride.get(entity.getUUID());
+        if (overrideJson != null) {
+            return FormattedNameCache.fromJson(overrideJson, entity.registryAccess());
+        }
+
+        // Nametag displays get respawned with new uuids, so also follow the player being renamed
+        String nameOverride = TextDisplayNametags.resolveNameOverride(entity, editorState);
+        if (nameOverride != null) {
+            return FormattedNameCache.get(nameOverride, entity.registryAccess());
+        }
+        return null;
     }
 
     @Inject(method = "extractRenderState(Lnet/minecraft/world/entity/Display$TextDisplay;Lnet/minecraft/client/renderer/entity/state/TextDisplayEntityRenderState;F)V", at = @At("RETURN"))
     public void extractRenderStateReturn(Display.TextDisplay entity, TextDisplayEntityRenderState state, float partialTick, CallbackInfo ci) {
-        // Restore original text after extraction
-        if (flashback$originalText != null) {
-            entity.setText(flashback$originalText);
-            flashback$originalText = null;
-        }
-
         // Apply 15% opacity for hidden text displays (replay preview only, fully hidden on export)
         EditorState editorState = EditorStateManager.getCurrent();
         if (editorState != null && !Flashback.isExporting() && editorState.hideDuringExport.contains(entity.getUUID()) && state.textRenderState != null) {

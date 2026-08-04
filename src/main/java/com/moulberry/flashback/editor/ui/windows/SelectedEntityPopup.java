@@ -7,6 +7,8 @@ import com.mojang.authlib.yggdrasil.ProfileResult;
 import com.mojang.blaze3d.platform.Window;
 import com.moulberry.flashback.FilePlayerSkin;
 import com.moulberry.flashback.Flashback;
+import com.moulberry.flashback.FormattedNameCache;
+import com.moulberry.flashback.TextDisplayNametags;
 import com.moulberry.flashback.Utils;
 import com.moulberry.flashback.combo_options.GlowingOverride;
 import com.moulberry.flashback.editor.ui.ImGuiHelper;
@@ -24,6 +26,7 @@ import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Avatar;
+import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
@@ -44,6 +47,7 @@ import java.net.http.HttpResponse;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -178,18 +182,32 @@ public class SelectedEntityPopup {
                     String nameTitle = I18n.get("flashback.name");
                     boolean changedName = ImGui.inputTextWithHint(nameTitle+"##SetNameInput", player.getScoreboardName(), changeNameInput);
 
+                    List<Display.TextDisplay> nametagDisplays = TextDisplayNametags.findFor(player);
+                    if (!nametagDisplays.isEmpty()) {
+                        ImGui.textDisabled(I18n.get("flashback.nametag_text_display_detected"));
+                    }
+
                     if (changedName) {
                         String string = ImGuiHelper.getString(changeNameInput);
                         if (string.isEmpty()) {
                             editorState.nameOverride.remove(entity.getUUID());
+                            for (Display.TextDisplay nametagDisplay : nametagDisplays) {
+                                editorState.textDisplayTextOverride.remove(nametagDisplay.getUUID());
+                            }
                         } else {
                             editorState.nameOverride.put(entity.getUUID(), string);
+                            String json = Flashback.parseFormattedText(string);
+                            for (Display.TextDisplay nametagDisplay : nametagDisplays) {
+                                editorState.textDisplayTextOverride.put(nametagDisplay.getUUID(), json);
+                            }
                         }
+                        editorState.markDirty();
                     }
 
                     if (!changeNameInput.isEmpty()) {
                         if (ImGui.button(I18n.get("flashback.apply_username_skin"))) {
-                            fetchSkinForUsername(entity.getUUID(), ImGuiHelper.getString(changeNameInput), editorState);
+                            String username = FormattedNameCache.plainText(ImGuiHelper.getString(changeNameInput), player.registryAccess());
+                            fetchSkinForUsername(entity.getUUID(), username, editorState);
                         }
                     }
 
@@ -237,7 +255,7 @@ public class SelectedEntityPopup {
                 showGlowingDropdown(entity, editorState);
 
                 if (ImGui.button(I18n.get("flashback.random_name"))) {
-                    fetchRandomNameAndSkin(entity.getUUID(), editorState);
+                    fetchRandomNameAndSkin(entity.getUUID(), TextDisplayNametags.findUuidsFor(player), editorState);
                 }
 
                 ImGuiHelper.separatorWithText(I18n.get("flashback.change_skin_and_cape"));
@@ -419,7 +437,7 @@ public class SelectedEntityPopup {
         });
     }
 
-    private static void fetchRandomNameAndSkin(UUID targetUuid, EditorState editorState) {
+    private static void fetchRandomNameAndSkin(UUID targetUuid, List<UUID> nametagDisplayUuids, EditorState editorState) {
         CompletableFuture.runAsync(() -> {
             try {
                 HttpClient client = HttpClient.newBuilder()
@@ -444,6 +462,12 @@ public class SelectedEntityPopup {
 
                 String nick = json.get("nick").getAsString();
                 editorState.nameOverride.put(targetUuid, nick);
+                if (!nametagDisplayUuids.isEmpty()) {
+                    String nickJson = Flashback.parseFormattedText(nick);
+                    for (UUID nametagDisplayUuid : nametagDisplayUuids) {
+                        editorState.textDisplayTextOverride.put(nametagDisplayUuid, nickJson);
+                    }
+                }
                 editorState.markDirty();
 
                 if (json.has("uuid")) {

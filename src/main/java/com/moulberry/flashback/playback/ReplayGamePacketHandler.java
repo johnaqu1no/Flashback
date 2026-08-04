@@ -948,6 +948,10 @@ public class ReplayGamePacketHandler implements ClientGamePacketListener {
         }
         for (ClientboundPlayerInfoUpdatePacket.Entry entry : clientboundPlayerInfoUpdatePacket.entries()) {
             var playerInfo = this.playerInfoMap.get(entry.profileId());
+            if (playerInfo == null) {
+                // Update for a player that was never added, e.g. the replay starts mid-stream
+                continue;
+            }
             for (ClientboundPlayerInfoUpdatePacket.Action action : clientboundPlayerInfoUpdatePacket.actions()) {
                 this.applyPlayerInfoUpdate(action, entry, playerInfo);
             }
